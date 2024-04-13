@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model user {
+  id              Int           @unique @default(autoincrement())
+  name            String
+  email           String        @unique
+  phoneNumber     String
+  password        String
+  role            role          @default(User)
+  created_at      DateTime      @default(now())
+  status          user_status   @default(Pending)
+  photo           String        @default("https://static.vecteezy.com/system/resources/previews/024/983/914/original/simple-user-default-icon-free-png.png")
+  barberStore     barberStore[]
+  barberPackageId Int
+  barberPackage   packages?     @relation(fields: [barberPackageId], references: [id])
+  OTP             String?
+  gender          gender        @default(Male)
+  booking         booking[]
+}
+
+model service {
+  id             Int              @unique @default(autoincrement())
+  name           String
+  barber_service barber_service[]
+}
+
+model barber_service {
+  id            Int         @unique @default(autoincrement())
+  barberStoreId Int
+  barberStore   barberStore @relation(fields: [barberStoreId], references: [id])
+  serviceId     Int
+  service       service     @relation(fields: [serviceId], references: [id])
+}
+
+model barberStore {
+  id                Int              @unique @default(autoincrement())
+  desc              String?
+  userId            Int
+  user              user             @relation(fields: [userId], references: [id])
+  address           String
+  lat               Float
+  lng               Float
+  photo             String?
+  barber_service    barber_service[]
+  booking           booking[]
+  startTime         String           @default("8 AM")
+  endTime           String           @default("9 PM")
+  barberServiceTime Float            @default(1)
+}
+
+model packages {
+  id    Int     @unique @default(autoincrement())
+  name  String
+  price Float
+  photo String?
+  user  user[]
+}
+
+model booking {
+  id            Int            @unique @default(autoincrement())
+  userId        Int
+  user          user           @relation(fields: [userId], references: [id])
+  barberStoreId Int
+  barberStore   barberStore    @relation(fields: [barberStoreId], references: [id])
+  Date          DateTime       @default(now())
+  status        booking_status @default(Booked)
+  rating        Int?
+  ratingDesc    String?
+}
+
+enum user_status {
+  Verifed
+  Pending
+}
+
+enum role {
+  Admin
+  User
+  Barber
+}
+
+enum booking_status {
+  Booked
+  Waiting
+  InProcess
+  Finished
+}
+
+enum gender {
+  Male
+  Female
+}
