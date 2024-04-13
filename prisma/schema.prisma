@@ -24,7 +24,7 @@ model user {
   status          user_status   @default(Pending)
   photo           String        @default("https://static.vecteezy.com/system/resources/previews/024/983/914/original/simple-user-default-icon-free-png.png")
   barberStore     barberStore[]
-  barberPackageId Int
+  barberPackageId Int?
   barberPackage   packages?     @relation(fields: [barberPackageId], references: [id])
   OTP             String?
   gender          gender        @default(Male)

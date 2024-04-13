@@ -43,7 +43,7 @@ const generateAndSendOTP = async (email,userId,message)=>{
     message = message + " " +  otp;
     const user =  await saveOTP(userId,otp);
     await  sendOTP(email,message);
-    console.log(result,user,otp);
+    console.log(user,otp);
 }
 const generateOTP = () => {
     const otp = crypto.randomInt(100000, 999999).toString(); // Generate a 6-digit OTP
