@@ -177,6 +177,9 @@ const saveOTP = async (userId, otp) => {
    const user =  await prisma.user.update({
         where:{
             id:+userId,
+            
+        },
+        data:{
             OTP:hashedOTP
         }
     })    
