@@ -13,7 +13,7 @@ const signToken = (id) => {
     return jwt.sign({ id }, "secret");
 };
 exports.register = catchAsync(async (req,res,next)=>{
-    const {email,password} = req.body;
+    const { email, password, ...otherDetails } = req.body;
     if(!email || !password){
         return next(new AppError("email and password are required!", 400));
     }
@@ -26,16 +26,50 @@ exports.register = catchAsync(async (req,res,next)=>{
         return next(new AppError("email already exists!", 400));
     }
     const hash = await bcrypt.hash(password,12);
+    
     const user = await prisma.user.create({
         data:{
             email:email,
             password:hash,
-            ...req.body
+            ...otherDetails
         }
     });
     await generateAndSendOTP(email,user.id,"Here is your OTP to Verfiy");
     res.status(200).json({
         user
+    });
+});
+exports.getMe = catchAsync (async (req,res,next)=>{
+    const user = await prisma.user.findUnique({
+        where:{
+            id:req.user.id
+        }
+    });
+    res.status(200).json({
+        user
+    });
+});
+exports.changePassword = catchAsync (async (req,res,next)=>{
+    const {oldPassword , newPassword} = req.body;
+    let user = await prisma.user.findUnique({
+        where: {
+            id : req.user.id
+        }
+    });
+    if (!user || !bcrypt.compare(oldPassword,user.password)){
+        return next(new AppError("Wrong data Sent!",400));
+    }
+    const hash = bcrypt.hash(newPassword,12);
+    user= await prisma.user.update({
+        where:{
+            id:user.id
+        },
+        data:{
+            password : hash
+        }
+    });
+    res.status(200).json({
+        user,
     });
 });
 const generateAndSendOTP = async (email,userId,message)=>{

@@ -1,13 +1,16 @@
 const nodemailer = require("nodemailer");
 
 const sendEmail = async (options) => {
-    const transporter = nodemailer.createTransport({
-        service: "hotmail",
-        auth: {
-            user: "salon.barber@outlook.com",
-            pass: "123Barber",
-        },
-    });
+   const transporter = nodemailer.createTransport({
+    host: "smtp-mail.outlook.com", // Outlook SMTP server
+    port: 587, // Outlook SMTP port
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: "salon.barber@outlook.com",
+        pass: "123Barber",
+    },
+   
+});
 
     const mailOptions = {
         from: 'Salon <salon.barber@outlook.com>', 
