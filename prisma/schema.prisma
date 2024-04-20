@@ -29,20 +29,32 @@ model user {
   OTP             String?
   gender          gender        @default(Male)
   booking         booking[]
+  favorite        favorite[]
 }
 
-model service {
-  id             Int              @unique @default(autoincrement())
-  name           String
-  barber_service barber_service[]
+model favorite {
+  id            Int         @unique @default(autoincrement())
+  userId        Int
+  barberStoreId Int
+  user          user        @relation(fields: [userId], references: [id])
+  barberStore   barberStore @relation(fields: [barberStoreId], references: [id])
 }
 
 model barber_service {
-  id            Int         @unique @default(autoincrement())
-  barberStoreId Int
-  barberStore   barberStore @relation(fields: [barberStoreId], references: [id])
-  serviceId     Int
-  service       service     @relation(fields: [serviceId], references: [id])
+  id               Int                @unique @default(autoincrement())
+  barberStoreId    Int
+  barberStore      barberStore        @relation(fields: [barberStoreId], references: [id])
+  serviceName      String
+  price            Float
+  booking_services booking_services[]
+}
+
+model booking_services {
+  id        Int             @unique @default(autoincrement())
+  bookingId Int?
+  booking   booking?        @relation(fields: [bookingId], references: [id])
+  serviceId Int?
+  service   barber_service? @relation(fields: [serviceId], references: [id])
 }
 
 model barberStore {
@@ -55,10 +67,13 @@ model barberStore {
   lng               Float
   photo             String?
   barber_service    barber_service[]
+  barberType        barber_type      @default(Male)
   booking           booking[]
   startTime         String           @default("8 AM")
   endTime           String           @default("9 PM")
   barberServiceTime Float            @default(1)
+  favorite          favorite[]
+  rating            Float            @default(5)
 }
 
 model packages {
@@ -70,15 +85,16 @@ model packages {
 }
 
 model booking {
-  id            Int            @unique @default(autoincrement())
-  userId        Int
-  user          user           @relation(fields: [userId], references: [id])
-  barberStoreId Int
-  barberStore   barberStore    @relation(fields: [barberStoreId], references: [id])
-  Date          DateTime       @default(now())
-  status        booking_status @default(Booked)
-  rating        Int?
-  ratingDesc    String?
+  id               Int                @unique @default(autoincrement())
+  userId           Int
+  user             user               @relation(fields: [userId], references: [id])
+  barberStoreId    Int
+  barberStore      barberStore        @relation(fields: [barberStoreId], references: [id])
+  Date             DateTime           @default(now())
+  status           booking_status     @default(Booked)
+  rating           Int?
+  ratingDesc       String?
+  booking_services booking_services[]
 }
 
 enum user_status {
@@ -90,6 +106,13 @@ enum role {
   Admin
   User
   Barber
+}
+
+enum barber_type {
+  Male
+  Female
+  Kids
+  Makeup
 }
 
 enum booking_status {
