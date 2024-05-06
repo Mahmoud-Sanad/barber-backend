@@ -42,8 +42,8 @@ model favorite {
 
 model barber_service {
   id               Int                @unique @default(autoincrement())
-  barberStoreId    Int
-  barberStore      barberStore        @relation(fields: [barberStoreId], references: [id])
+  barberStoreId    Int?
+  barberStore      barberStore?        @relation(fields: [barberStoreId], references: [id])
   serviceName      String
   price            Float
   booking_services booking_services[]

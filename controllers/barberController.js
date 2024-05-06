@@ -2,18 +2,39 @@ const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
 const { PrismaClient } =require( '@prisma/client');
 const prisma = new PrismaClient();
+exports.createServices = catchAsync(async(req,res,next)=>{
+    const {services} = req.body; // [ {name : , price : },{name : , price : }]
+    const servicesId = [];
+    await services.forEach(async service => {
+        const serviceD  = await prisma.barber_service.create({
+            data:{
+                price:+service.price,
+                serviceName:service.name
+            }
+        });
+        servicesId.push(serviceD.id);
+    });
+    req.serviceId = servicesId;
+    next();
+});
 exports.createStore = catchAsync(async (req,res,next)=>{
-    const {servicesId} = req.body;
+    const servicesId = req.serviceId;
     const store = await prisma.barberStore.create({
         data:{
             userId : req.user.id,
-            barber_service:{
-                createMany:{
-                    data:servicesId.map(serviceId => ({serviceId,}))
-                }
-            },
             ...req.body
         }
+    });
+    await servicesId.forEach(async id => {
+        await prisma.barber_service.update({
+            where:{
+                id:+id,
+
+            },
+            data:{
+                barberStoreId : store.id
+            }
+        });
     });
     res.status(201).json({
         store,
@@ -87,5 +108,27 @@ exports.getAllServices = catchAsync(async (req,res,next)=>{
     });
     res.status(200).json({
         services
+    });
+});
+exports.getAllbooked = catchAsync(async (req,res,next)=>{
+    const {id} = req.params;
+    const bookings = await prisma.booking.findMany({
+        where:{
+            barberStoreId:+id,
+        },
+        include:{
+            user:{
+                select:{
+                    name:true,
+                    gender:true,
+                    photo:true,
+                    phoneNumber:true,
+                    email:true,
+                }
+            }
+        }
+    });
+    res.status(200).json({
+        bookings,
     });
 });
