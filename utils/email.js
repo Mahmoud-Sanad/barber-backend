@@ -4,7 +4,10 @@ const sendEmail = async (options) => {
    const transporter = nodemailer.createTransport({
     host: "smtp-mail.outlook.com", // Outlook SMTP server
     port: 587, // Outlook SMTP port
-    secure: false, // true for 465, false for other ports
+    tls:{
+      ciphers:"SSLv3",
+      rejectUnauthorized:false  
+    },
     auth: {
         user: "salon.barber@outlook.com",
         pass: "123Barber",
