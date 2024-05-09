@@ -2,6 +2,71 @@ const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
 const { PrismaClient } =require( '@prisma/client');
 const prisma = new PrismaClient();
+exports.getFavorite = catchAsync(async (req,res,next)=>{
+    const favorites = await prisma.favorite.findMany({
+        where:{
+            userId:+req.user.id,
+        },
+        include:{
+            barberStore:true,
+
+        }
+    });
+    res.status(200).json({
+        favorites
+    });
+});
+exports.addFavorite = catchAsync(async (req,res,next)=>{
+    const {id} = req.params;
+    const favorite = await prisma.favorite.create({
+        data:{
+            barberStoreId:+id,
+            userId:+req.user.id,
+        }
+    });
+    res.status(200).json({
+        favorite
+    });
+});
+exports.book = catchAsync(async (req,res,next)=>{
+    const {id} = req.params;
+    var booking = await prisma.booking.create({
+        data:{
+            barberStoreId : +id,
+            userId : +req.user.id,
+            Date:new Date(Date.now()),
+        }
+    });
+    const {servicesId} = req.body;
+    if (!servicesId){
+        return next(new AppError("serviceId cant be null!",400));
+    }
+    servicesId.forEach(async e => {
+        await prisma.booking_services.create({
+            data:{
+                bookingId:booking.id,
+                serviceId:+e,
+
+            }
+        });
+    });
+    booking = await prisma.booking.findUnique({
+        where:{
+            id:booking.id
+        },
+        include:{
+            barberStore:true,
+            booking_services:{
+                include:{
+                    service:true
+                }
+            }
+        }
+    });
+    res.status(200).json({
+        booking,
+    });
+});
 exports.getMyBooking = catchAsync(async(req,res,next)=>{
     const booking = await prisma.booking.findMany({
         where:{
@@ -48,7 +113,7 @@ exports.getBookingById = catchAsync(async (req, res, next) => {
     }
 
     // Convert booking.date to a Date object if it's not already
-    const bookingDate = new Date(booking.date);
+    const bookingDate = new Date(booking.Date);
 
     // Calculate the current time plus 30 minutes
     const now = new Date();

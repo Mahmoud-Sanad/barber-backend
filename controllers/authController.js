@@ -6,9 +6,10 @@ const { PrismaClient } =require( '@prisma/client');
 const {promisify} = require("util");
 const crypto = require("crypto");
 const sendEmail = require("../utils/email");
-
+const accountSid ='AC1858c1f64bedbb032637043e3eb70569'; 
+const authToken = 'b68f1a74697b225aaad0279c655cd1e9';  
+const client =  require('twilio')(accountSid, authToken);
 const prisma = new PrismaClient();
-
 const signToken = (id) => {
     return jwt.sign({ id }, "secret");
 };
@@ -17,23 +18,44 @@ exports.register = catchAsync(async (req,res,next)=>{
     if(!email || !password){
         return next(new AppError("email and password are required!", 400));
     }
-    const exist =  await prisma.user.findUnique({
-        where:{
-            email : email,
-        }
-    });
+    var exist;
+    if (isNaN(email)){
+        exist =  await prisma.user.findUnique({
+            where:{
+                email : email,
+            }
+        });
+    }else {
+        exist =  await prisma.user.findUnique({
+            where:{
+                phoneNumber : email,
+            }
+        });
+    }
+    
     if (exist){
         return next(new AppError("email already exists!", 400));
     }
     const hash = await bcrypt.hash(password,12);
+    var user ;
+    if (isNaN(email)){
+        user = await prisma.user.create({
+            data:{
+                email:email,
+                password:hash,
+                ...otherDetails
+            }
+        });
+    }else {
+        user = await prisma.user.create({
+            data:{
+                phoneNumber:email,
+                password:hash,
+                ...otherDetails
+            }
+        });
+    }
     
-    const user = await prisma.user.create({
-        data:{
-            email:email,
-            password:hash,
-            ...otherDetails
-        }
-    });
     await generateAndSendOTP(email,user.id,"Here is your OTP to Verfiy");
     res.status(200).json({
         user
@@ -76,7 +98,12 @@ const generateAndSendOTP = async (email,userId,message)=>{
     const otp = generateOTP();
     message = message + " " +  otp;
     const user =  await saveOTP(userId,otp);
-    await  sendOTP(email,message);
+    if (isNaN(email)){
+
+        await  sendOTP(email,message);
+    }else {
+        await  sendPhoneOTP(email,message);
+    }
     console.log(user,otp);
 }
 const generateOTP = () => {
@@ -95,16 +122,38 @@ const sendOTP = async (email,message) => {
     }
     
 };
+const sendPhoneOTP = async(phone,message)=>{
+    try {
+        const res  = await client.message.create({
+            body: `${message}`,
+            to: `+${phone}`, 
+            from: '+965 6663 4112' 
+        })
+        console.log(res);
+    } catch (error) {
+        console.log(error);
+    }
+}
 exports.login = catchAsync(async (req, res, next) => {
     const { email, password } = req.body;
     if(!email || !password){
         return next(new AppError("username and password are required!", 400));
     }
-    const user = await prisma.user.findUnique({
-        where:{
-            email : email
-        }
-    });
+    var user;
+    if (isNaN(email)){
+        user = await prisma.user.findUnique({
+            where:{
+                email : email
+            }
+        });
+    }else {
+        user = await prisma.user.findUnique({
+            where:{
+                phoneNumber : email
+            }
+        });
+    }
+     
     if (!user || !(await bcrypt.compare(password,user.password))) {
         return next(new AppError("incorrect data send!", 403));
     }
@@ -158,11 +207,21 @@ exports.restrictTo = (...roles) => {
 };
 exports.forgetPassword = catchAsync(async (req,res,next)=>{
     const {email} = req.body;
-    const user = await prisma.user.findUnique({
-        where:{
-            email:email
-        }
-    });
+    var user;
+    if (isNaN(email)){
+         user = await prisma.user.findUnique({
+            where:{
+                email:email
+            }
+        });
+    }else{
+        user = await prisma.user.findUnique({
+            where:{
+                phoneNumber:email
+            }
+        });
+    }
+    
     if (!user){
         return next(new AppError("there is no user with this email!",404));
     }
@@ -173,13 +232,21 @@ exports.forgetPassword = catchAsync(async (req,res,next)=>{
 });
 exports.resetPassword = catchAsync(async (req,res,next)=>{
     const { email,otp,password } = req.body;
-    
-        let user = await prisma.user.findUnique({
-        where: {
-            email,
-            },
-        });
-    
+    var user;
+        if (isNaN(email)){
+            user = await prisma.user.findUnique({
+                where: {
+                    email,
+                    },
+                });
+        }else {
+            user = await prisma.user.findUnique({
+                where: {
+                    phoneNumber:email,
+                    },
+                });
+        }
+        
         if (!user ) {
         return next(new AppError("OTP is invalid or has expired.",400));
         }
@@ -227,12 +294,21 @@ const saveOTP = async (userId, otp) => {
 
 exports.verifyOTP =catchAsync( async (req, res,next) => {
         const {email, otp } = req.body;
-    
-        let user = await prisma.user.findUnique({
-        where: {
-            email
-            },
-        });
+        
+        var user;
+        if (isNaN(email)){
+            user = await prisma.user.findUnique({
+                where: {
+                    email,
+                    },
+                });
+        }else {
+            user = await prisma.user.findUnique({
+                where: {
+                    phoneNumber:email,
+                    },
+                });
+        }
     
         if (!user) {
         return next(new AppError("OTP is invalid or has expired.",400));
