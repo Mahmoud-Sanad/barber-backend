@@ -6,8 +6,8 @@ const { PrismaClient } =require( '@prisma/client');
 const {promisify} = require("util");
 const crypto = require("crypto");
 const sendEmail = require("../utils/email");
-const accountSid ='AC1858c1f64bedbb032637043e3eb70569'; 
-const authToken = 'b68f1a74697b225aaad0279c655cd1e9';  
+const accountSid =process.env.TWILIO_ACCOUNT_SID; 
+const authToken = process.env.TWILIO_AUTH_TOKEN ;
 const client =  require('twilio')(accountSid, authToken);
 const prisma = new PrismaClient();
 const signToken = (id) => {
@@ -124,7 +124,7 @@ const sendOTP = async (email,message) => {
 };
 const sendPhoneOTP = async(phone,message)=>{
     try {
-        const res  = await client.message.create({
+        const res  = await client.messages.create({
             body: `${message}`,
             to: `+${phone}`, 
             from: '+965 6663 4112' 
