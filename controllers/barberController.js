@@ -19,6 +19,43 @@ exports.changeBookingStatus = catchAsync(async (req,res,next)=>{
         booking,
     });
 });
+exports.getStoreById = catchAsync(async (req,res,next)=>{
+    const {id} = req.params;
+    const store = await prisma.barberStore.findUnique({
+        where:{
+            id:+id
+        },
+        include:{
+            barber_service:true,
+            user:true,
+            booking:{
+                include:{
+                    user:true,
+                    booking_services:true
+                }
+            }
+        }
+    });
+    res.status(200).json({
+        store
+    });
+});
+exports.getMyStores = catchAsync(async (req,res,next)=>{
+
+    const stores = await prisma.barberStore.findMany({
+        where:{
+            userId:+req.user.id
+        },
+        include:{
+            barber_service:true,
+            
+            
+        }
+    });
+    res.status(200).json({
+        stores
+    });
+});
 exports.getStoreBookings = catchAsync(async (req,res,next)=>{
     const {id} = req.params;
     const bookings = await prisma.booking.findMany({
@@ -35,6 +72,7 @@ exports.getStoreBookings = catchAsync(async (req,res,next)=>{
 });
 exports.createServices = catchAsync(async(req,res,next)=>{
     const {services} = req.body; // [ {name : , price : },{name : , price : }]
+    console.log(req.body);
     const servicesId = [];
     await services.forEach(async service => {
         const serviceD  = await prisma.barber_service.create({
@@ -50,6 +88,7 @@ exports.createServices = catchAsync(async(req,res,next)=>{
 });
 exports.createStore = catchAsync(async (req,res,next)=>{
     const servicesId = req.serviceId;
+    req.body.services = undefined;
     const store = await prisma.barberStore.create({
         data:{
             userId : req.user.id,

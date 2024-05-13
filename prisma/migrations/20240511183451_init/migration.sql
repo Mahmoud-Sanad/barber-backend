@@ -1,27 +1,22 @@
-/*
-  Warnings:
+-- CreateTable
+CREATE TABLE `user` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NULL,
+    `phoneNumber` VARCHAR(191) NULL,
+    `password` VARCHAR(191) NOT NULL,
+    `role` ENUM('Admin', 'User', 'Barber') NOT NULL DEFAULT 'User',
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `status` ENUM('Verifed', 'Pending') NOT NULL DEFAULT 'Pending',
+    `photo` VARCHAR(191) NOT NULL DEFAULT 'https://static.vecteezy.com/system/resources/previews/024/983/914/original/simple-user-default-icon-free-png.png',
+    `barberPackageId` INTEGER NULL,
+    `OTP` VARCHAR(191) NULL,
+    `gender` ENUM('Male', 'Female') NOT NULL DEFAULT 'Male',
 
-  - You are about to alter the column `status` on the `user` table. The data in that column could be lost. The data in that column will be cast from `Enum(EnumId(1))` to `Enum(EnumId(1))`.
-  - Added the required column `password` to the `user` table without a default value. This is not possible if the table is not empty.
-
-*/
--- DropForeignKey
-ALTER TABLE `user` DROP FOREIGN KEY `user_barberPackageId_fkey`;
-
--- AlterTable
-ALTER TABLE `barberstore` ADD COLUMN `barberServiceTime` DOUBLE NOT NULL DEFAULT 1,
-    ADD COLUMN `barberType` ENUM('Male', 'Female', 'Kids', 'Makeup') NOT NULL DEFAULT 'Male',
-    ADD COLUMN `desc` VARCHAR(191) NULL,
-    ADD COLUMN `endTime` VARCHAR(191) NOT NULL DEFAULT '9 PM',
-    ADD COLUMN `rating` DOUBLE NOT NULL DEFAULT 5,
-    ADD COLUMN `startTime` VARCHAR(191) NOT NULL DEFAULT '8 AM';
-
--- AlterTable
-ALTER TABLE `user` ADD COLUMN `OTP` VARCHAR(191) NULL,
-    ADD COLUMN `gender` ENUM('Male', 'Female') NOT NULL DEFAULT 'Male',
-    ADD COLUMN `password` VARCHAR(191) NOT NULL,
-    MODIFY `status` ENUM('Verifed', 'Pending') NOT NULL DEFAULT 'Pending',
-    MODIFY `barberPackageId` INTEGER NULL;
+    UNIQUE INDEX `user_id_key`(`id`),
+    UNIQUE INDEX `user_email_key`(`email`),
+    UNIQUE INDEX `user_phoneNumber_key`(`phoneNumber`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `favorite` (
@@ -35,7 +30,7 @@ CREATE TABLE `favorite` (
 -- CreateTable
 CREATE TABLE `barber_service` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `barberStoreId` INTEGER NOT NULL,
+    `barberStoreId` INTEGER NULL,
     `serviceName` VARCHAR(191) NOT NULL,
     `price` DOUBLE NOT NULL,
 
@@ -49,6 +44,34 @@ CREATE TABLE `booking_services` (
     `serviceId` INTEGER NULL,
 
     UNIQUE INDEX `booking_services_id_key`(`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `barberStore` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `desc` VARCHAR(191) NULL,
+    `userId` INTEGER NOT NULL,
+    `address` VARCHAR(191) NOT NULL,
+    `lat` DOUBLE NOT NULL,
+    `lng` DOUBLE NOT NULL,
+    `photo` VARCHAR(191) NULL,
+    `barberType` ENUM('Male', 'Female', 'Kids', 'Makeup') NOT NULL DEFAULT 'Male',
+    `startTime` VARCHAR(191) NOT NULL DEFAULT '8 AM',
+    `endTime` VARCHAR(191) NOT NULL DEFAULT '9 PM',
+    `barberServiceTime` DOUBLE NOT NULL DEFAULT 1,
+    `rating` DOUBLE NOT NULL DEFAULT 5,
+
+    UNIQUE INDEX `barberStore_id_key`(`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `packages` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `price` DOUBLE NOT NULL,
+    `photo` VARCHAR(191) NULL,
+
+    UNIQUE INDEX `packages_id_key`(`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -74,13 +97,16 @@ ALTER TABLE `favorite` ADD CONSTRAINT `favorite_userId_fkey` FOREIGN KEY (`userI
 ALTER TABLE `favorite` ADD CONSTRAINT `favorite_barberStoreId_fkey` FOREIGN KEY (`barberStoreId`) REFERENCES `barberStore`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `barber_service` ADD CONSTRAINT `barber_service_barberStoreId_fkey` FOREIGN KEY (`barberStoreId`) REFERENCES `barberStore`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `barber_service` ADD CONSTRAINT `barber_service_barberStoreId_fkey` FOREIGN KEY (`barberStoreId`) REFERENCES `barberStore`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `booking_services` ADD CONSTRAINT `booking_services_bookingId_fkey` FOREIGN KEY (`bookingId`) REFERENCES `booking`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `booking_services` ADD CONSTRAINT `booking_services_serviceId_fkey` FOREIGN KEY (`serviceId`) REFERENCES `barber_service`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `barberStore` ADD CONSTRAINT `barberStore_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `booking` ADD CONSTRAINT `booking_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

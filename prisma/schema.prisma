@@ -59,21 +59,23 @@ model booking_services {
 
 model barberStore {
   id                Int              @unique @default(autoincrement())
+  name              String
+  phone             String
   desc              String?
   userId            Int
   user              user             @relation(fields: [userId], references: [id])
   address           String
-  lat               Float
-  lng               Float
+  lat               Decimal
+  lng               Decimal
   photo             String?
   barber_service    barber_service[]
   barberType        barber_type      @default(Male)
   booking           booking[]
   startTime         String           @default("8 AM")
   endTime           String           @default("9 PM")
-  barberServiceTime Float            @default(1)
+  barberServiceTime Decimal            @default(1)
   favorite          favorite[]
-  rating            Float            @default(5)
+  rating            Decimal            @default(5)
 }
 
 model packages {
