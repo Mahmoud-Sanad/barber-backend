@@ -174,7 +174,11 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   }
 exports.getAllBarbers = catchAsync(async (req,res,next)=>{
     let {type,nearest,farthest,lat,lng,services} = req.query;
-    services = services.split(",");
+    if (services !== undefined) {
+        services = services.split(",");
+    }else {
+        services = [];
+    }
     const userLat = parseFloat(lat);
     const userLng = parseFloat(lng);
     const whereClause = {
