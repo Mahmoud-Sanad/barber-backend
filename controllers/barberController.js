@@ -44,16 +44,60 @@ exports.getMyStores = catchAsync(async (req,res,next)=>{
 
     const stores = await prisma.barberStore.findMany({
         where:{
-            userId:+req.user.id
+            userId:+req.user.id,
+            
         },
         include:{
             barber_service:true,
+            booking:{
+                where:{
+                    status:{
+                        not:"Finished"
+                    }
+                },
+                include:{
+                    user:true,
+                    booking_services:{
+                        include:{
+                           service:true
+                        }
+                    
+                    },
+
+                },
+                orderBy:{
+                    Date:"asc"
+                }
+            }
             
             
         }
     });
+    console.log(stores);
     res.status(200).json({
         stores
+    });
+});
+exports.getActiveStoreBookings = catchAsync(async (req,res,next)=>{
+    const {id} = req.params;
+    const bookings = await prisma.booking.findMany({
+        where:{
+            barberStoreId:+id,
+            status:{
+                notIn:["Finished","Canceled"]
+            }
+        },
+        include:{
+            user:true,
+            booking_services:{
+                include:{
+                    service:true
+                }
+            }
+        }
+    });
+    res.status(200).json({
+        bookings
     });
 });
 exports.getStoreBookings = catchAsync(async (req,res,next)=>{
@@ -61,6 +105,7 @@ exports.getStoreBookings = catchAsync(async (req,res,next)=>{
     const bookings = await prisma.booking.findMany({
         where:{
             barberStoreId:+id,
+            
         },
         include:{
             user:true
