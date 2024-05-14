@@ -197,7 +197,8 @@ exports.getAllBarbers = catchAsync(async (req,res,next)=>{
     const barbers = await  prisma.barberStore.findMany({
         where: whereClause,
         include:{
-            barber_service:true
+            barber_service:true,
+            favorite:true,
         },
         orderBy:{
             booking:{
@@ -211,12 +212,17 @@ exports.getAllBarbers = catchAsync(async (req,res,next)=>{
         const farthestDistance = parseFloat(farthest);
         barbersInRange = barbers.filter(barber => {
             const distance = haversineDistance(userLat, userLng, barber.lat, barber.lng);
+            barber.distance = distance;
             return distance >= nearestDistance && distance <= farthestDistance;
         });
     }else {
         barbersInRange=barbers;
     }
-    
+    barbersInRange = barbersInRange.map(barber => {
+         barber.isFavorite = barber.favorite.some(fav => fav.userId === req.user.id);
+            return barber;
+        });
+
     res.status(200).json({
         barbersInRange
     })

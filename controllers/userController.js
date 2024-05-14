@@ -2,15 +2,88 @@ const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
 const { PrismaClient } =require( '@prisma/client');
 const prisma = new PrismaClient();
+exports.getAllBooking = catchAsync(async (req,res,next)=>{
+    const  {lat,lng} = req.query;
+    console.log(lat,lng);
+    let booking = await prisma.booking.findMany({
+        where:{
+            userId:+req.user.id
+        },
+        include:{
+            booking_services:{
+                include:{
+                    service:true
+                }
+            },
+            barberStore:true,
+            user:true
+        }
+    });
+    booking = booking.map(e=>{
+        e.distance = haversineDistance(e.barberStore.lat,e.barberStore.lng,lat,lng);
+        console.log(e);
+        return e;
+    });
+    
+    res.status(200).json({
+        booking
+    });
+});
+exports.rate = catchAsync(async (req,res,next)=>{
+    const {id} = req.params;
+    const {rating,ratingDesc} = req.body;
+    let booking = await prisma.booking.update({
+        where:{
+            id:+id
+        },
+        data:{
+
+            rating:+rating,
+            ratingDesc:ratingDesc,
+        }
+    });
+    
+    res.status(200).json({
+        booking,
+    });
+});
+function haversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = degreesToRadians(lat2 - lat1);
+    const dLon = degreesToRadians(lon2 - lon1);
+    lat1 = degreesToRadians(lat1);
+    lat2 = degreesToRadians(lat2);
+  
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2); 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+    return R * c;
+  }
+  
+  // Helper function to convert degrees to radians
+  function degreesToRadians(degrees) {
+    return degrees * (Math.PI / 180);
+  }
 exports.getFavorite = catchAsync(async (req,res,next)=>{
-    const favorites = await prisma.favorite.findMany({
+    const  {lat,lng} = req.query;
+
+    let favorites = await prisma.favorite.findMany({
         where:{
             userId:+req.user.id,
         },
         include:{
-            barberStore:true,
+            barberStore:{
+                include:{
+                    barber_service:true,
+                 
+                }
+            }
 
         }
+    });
+    favorites = favorites.map(e=>{
+        e.distance = haversineDistance(e.barberStore.lat,e.barberStore.lng,lat,lng);
+        return e;
     });
     res.status(200).json({
         favorites
@@ -18,14 +91,33 @@ exports.getFavorite = catchAsync(async (req,res,next)=>{
 });
 exports.addFavorite = catchAsync(async (req,res,next)=>{
     const {id} = req.params;
-    const favorite = await prisma.favorite.create({
-        data:{
+    let favorite;
+    let isFavorite = false;
+    const exist = await prisma.favorite.findFirst({ 
+        where:{
             barberStoreId:+id,
-            userId:+req.user.id,
+            userId:+req.user.id
         }
     });
+    if (exist){
+       favorite =  await prisma.favorite.delete({
+            where:{
+                id:exist.id
+            }
+        });
+    }else {
+         favorite = await prisma.favorite.create({
+            data:{
+                barberStoreId:+id,
+                userId:+req.user.id,
+            }
+        });
+        isFavorite = true;
+    }
+
+   
     res.status(200).json({
-        favorite
+        isFavorite,
     });
 });
 exports.book = catchAsync(async (req,res,next)=>{
@@ -68,21 +160,35 @@ exports.book = catchAsync(async (req,res,next)=>{
     });
 });
 exports.getMyBooking = catchAsync(async(req,res,next)=>{
+    const  {lat,lng} = req.query;
+
     const booking = await prisma.booking.findMany({
         where:{
             userId:req.user.id,
-            status:{
-                not:"Finished"
-            },
+            OR: [
+                {
+                    status:"Finished",
+                   rating:null 
+                }, {
+                    status:  {
+                        not: "Finished"
+                    },
+                }
+            ]
 
         },
         include:{
-            booking_services:true,
-            barberStore:true
+            booking_services:{
+                include:{
+                    service:true
+                }
+            },
+            barberStore:true,
+            user:true
             
         },
         orderBy:{
-            Date:"desc"
+            Date:"asc"
         }
     });
     let lastBooking;
@@ -91,6 +197,8 @@ exports.getMyBooking = catchAsync(async(req,res,next)=>{
     }else {
         lastBooking = null
     }
+    lastBooking.distance = haversineDistance(lastBooking.barberStore.lat,lastBooking.barberStore.lng,lat,lng);
+    print(lastBooking);
     res.status(200).json({
         booking : lastBooking,
     });
