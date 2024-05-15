@@ -2,6 +2,58 @@ const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
 const { PrismaClient } =require( '@prisma/client');
 const prisma = new PrismaClient();
+exports.cancelBooking = catchAsync(async (req,res,next)=>{
+    const {id} = req.params;
+    let booking = await prisma.booking.update({
+        where:{
+            id:+id
+        },
+        data:{
+            status:"Canceled"
+        }
+    });
+    res.status(200).json({
+        booking
+    });
+});
+exports.finishBooking = catchAsync(async (req,res,next)=>{
+    const {id} = req.params;
+    let booking = await prisma.booking.update({
+        where:{
+            id:+id
+        },
+        data:{
+            status:"Finished"
+        }
+    });
+    res.status(200).json({
+        booking
+    });
+});
+exports.getBookingByDate = catchAsync(async (req,res,next)=>{
+    const {date} = req.query;
+    const {id} = req.params;
+    let currentDate = new Date(date);
+    let datePlusDay = new Date(date);
+    datePlusDay.setDate(datePlusDay.getDate() + 1);
+    console.log(currentDate,datePlusDay);
+    const booking = await prisma.booking.findMany({
+        where:{
+            barberStoreId : +id,
+            Date:{
+                gte: currentDate,
+                lt: datePlusDay
+            }
+        },
+        include:{
+            booking_services:true,
+            barberStore:true
+        }
+    });
+    res.status(200).json({
+        booking
+    });
+});
 exports.getAllBooking = catchAsync(async (req,res,next)=>{
     const  {lat,lng} = req.query;
     console.log(lat,lng);
@@ -20,8 +72,8 @@ exports.getAllBooking = catchAsync(async (req,res,next)=>{
         }
     });
     booking = booking.map(e=>{
-        e.distance = haversineDistance(e.barberStore.lat,e.barberStore.lng,lat,lng);
-        console.log(e);
+        e.barberStore.distance = haversineDistance(e.barberStore.lat,e.barberStore.lng,lat,lng);
+      
         return e;
     });
     
@@ -82,7 +134,7 @@ exports.getFavorite = catchAsync(async (req,res,next)=>{
         }
     });
     favorites = favorites.map(e=>{
-        e.distance = haversineDistance(e.barberStore.lat,e.barberStore.lng,lat,lng);
+        e.barberStore.distance = haversineDistance(e.barberStore.lat,e.barberStore.lng,lat,lng);
         return e;
     });
     res.status(200).json({
@@ -122,14 +174,18 @@ exports.addFavorite = catchAsync(async (req,res,next)=>{
 });
 exports.book = catchAsync(async (req,res,next)=>{
     const {id} = req.params;
+    let {servicesId,date,paymentType} = req.body;
+    const {lat,lng} = req.query;
+    date = new Date(date.replace(' ', 'T') + 'Z');
     var booking = await prisma.booking.create({
         data:{
             barberStoreId : +id,
             userId : +req.user.id,
-            Date:new Date(Date.now()),
+            Date:date,
+            paymentType,
+            
         }
     });
-    const {servicesId} = req.body;
     if (!servicesId){
         return next(new AppError("serviceId cant be null!",400));
     }
@@ -147,14 +203,18 @@ exports.book = catchAsync(async (req,res,next)=>{
             id:booking.id
         },
         include:{
-            barberStore:true,
+            barberStore:true,   
             booking_services:{
                 include:{
                     service:true
                 }
-            }
+            },
+            user:true
         }
     });
+
+    booking.barberStore.distance = haversineDistance(booking.barberStore.lat,booking.barberStore.lng,lat,lng);
+
     res.status(200).json({
         booking,
     });
@@ -171,7 +231,7 @@ exports.getMyBooking = catchAsync(async(req,res,next)=>{
                    rating:null 
                 }, {
                     status:  {
-                        not: "Finished"
+                        notIn: ["Finished","Canceled"]
                     },
                 }
             ]
@@ -197,8 +257,10 @@ exports.getMyBooking = catchAsync(async(req,res,next)=>{
     }else {
         lastBooking = null
     }
-    lastBooking.distance = haversineDistance(lastBooking.barberStore.lat,lastBooking.barberStore.lng,lat,lng);
-    print(lastBooking);
+    if (lastBooking){
+
+        lastBooking.barberStore.distance = haversineDistance(lastBooking.barberStore.lat,lastBooking.barberStore.lng,lat,lng);
+    }
     res.status(200).json({
         booking : lastBooking,
     });

@@ -94,6 +94,7 @@ model booking {
   barberStore      barberStore        @relation(fields: [barberStoreId], references: [id])
   Date             DateTime           @default(now())
   status           booking_status     @default(Booked)
+  paymentType      Payment_Type       @default(Cash)
   rating           Int?
   ratingDesc       String?
   booking_services booking_services[]
@@ -123,6 +124,10 @@ enum booking_status {
   InProcess
   Finished
   Canceled
+}
+enum Payment_Type {
+  Cash
+  Card
 }
 
 enum gender {
